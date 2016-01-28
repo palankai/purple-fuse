@@ -3,6 +3,7 @@ from __future__ import print_function
 import argparse
 import contextlib
 import logging
+import sys
 import textwrap
 import types
 import unittest
@@ -43,11 +44,12 @@ class Unittest(Command):
         with self.enclose_openerp_api(options):
             config['skipif'] = options.skipif
             with self.coverage_report(options.cover):
-                self.execute_tests(
+                was_successful = self.execute_tests(
                     options.tests,
                     options.verbosity,
                     log=options.log in ['test', 'all']
                 )
+            sys.exit(not was_successful)
 
     @contextlib.contextmanager
     def enclose_openerp_api(self, options):
@@ -74,9 +76,10 @@ class Unittest(Command):
             verbosity=verbosity
         )
         self.set_logging(log)
-        runner.run(suite)
+        return runner.run(suite).wasSuccessful()
 
     def build_test_suite(self, tests):
+
         suite = unittest.TestSuite()
         loader = unittest.TestLoader()
         for test in tests:
