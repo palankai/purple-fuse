@@ -34,20 +34,20 @@ class Unittest(Command):
     """
 
     def run(self, args):
-        options = self.parse_args(args)
-        if options.scratch:
-            purplespade.drop_database(options.database)
+        self.options = self.parse_args(args)
+        if self.options.scratch:
+            purplespade.drop_database(self.options.database)
 
-        self.set_logging(options.log in ['init', 'all'])
-        if options.database:
-            config['db_name'] = options.database
-        with self.enclose_openerp_api(options):
-            config['skipif'] = options.skipif
-            with self.coverage_report(options.cover):
+        self.set_logging(self.options.log in ['init', 'all'])
+        if self.options.database:
+            config['db_name'] = self.options.database
+        with self.enclose_openerp_api(self.options):
+            config['skipif'] = self.options.skipif
+            with self.coverage_report(self.options.cover):
                 was_successful = self.execute_tests(
-                    options.tests,
-                    options.verbosity,
-                    log=options.log in ['test', 'all']
+                    self.options.tests,
+                    self.options.verbosity,
+                    log=self.options.log in ['test', 'all']
                 )
             sys.exit(not was_successful)
 
@@ -66,7 +66,6 @@ class Unittest(Command):
                 update=update
             ):
                 yield
-
     def execute_tests(self, tests, verbosity, log):
         if tests:
             suite = self.build_test_suite(tests)
@@ -93,7 +92,7 @@ class Unittest(Command):
 
     def build_all_tests_suite(self):
         suite = unittest.TestSuite()
-        exclude = ['base', 'base_import']
+        exclude = self.options.exclude.split(',')
         for key, obj in openerp.addons.__dict__.iteritems():
             if type(obj) is types.ModuleType and key not in exclude:
                 suite.addTests(self.build_addon_test_suite(key))
@@ -179,6 +178,11 @@ class Unittest(Command):
             default="init",
             help="Control which part of code can write logs"
         )
+        parser.add_argument(
+            '-e', '--exclude', default='base,base_import',
+            help="Exclude modules (names separated by commma) from test"
+        )
+
         parser.add_argument(
             'tests', nargs="*",
             help="can be a list of any number of test modules, classes and test \
